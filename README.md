@@ -21,3 +21,4 @@ Attempting to benchmark different fastq-pairing methods to identify trade-offs b
 - [ ] BAM input
 - [ ] GZIP input
 - [ ] Compress output
+- [ ] Assert paired end
