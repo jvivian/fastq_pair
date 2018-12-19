@@ -14,7 +14,6 @@ struct PartialRead {
 }
 
 // Complete Read with header
-#[derive(PartialEq)]
 struct Read {
     header: String,
     seq: String,
@@ -60,7 +59,7 @@ fn write_pairs(r2_path: &str, map: &mut HashMap<String, PartialRead>) -> Result<
             // Write to BufWriters and remove from HashMap
             let r1 = &map[&header];
             write!(&mut r1_writer, "{}.1\n{}+\n{}", &header, r1.seq, r1.qscore)?;
-            write!(&mut r2_writer, "{}.2\n{}\n+\n{}", &header, read.seq, read.qscore)?;
+            write!(&mut r2_writer, "{}.2\n{}+\n{}", &header, read.seq, read.qscore)?;
             map.remove(&header);
         } else {
             // Else: Write out R2 to singleton file
@@ -78,7 +77,7 @@ fn write_pairs(r2_path: &str, map: &mut HashMap<String, PartialRead>) -> Result<
     let s_handle = File::open(&singleton_path)?;
     let mut s_reader = BufReader::new(s_handle);
     match parse_read(&mut s_reader) {
-        Some(_) => {},
+        Some(_) => {}
         None => std::fs::remove_file(singleton_path)?
     };
 
@@ -145,7 +144,6 @@ fn get_matches() -> ArgMatches<'static> {
                 .takes_value(true))
         .get_matches();
 
-//    println!("Arguments\n{:#?}", matches);
     matches
 }
 
