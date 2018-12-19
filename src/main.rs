@@ -108,7 +108,7 @@ fn parse_header(header: &str) -> Result<String> {
 }
 
 
-/// Parses BufReader object to Read
+/// Parses Read from BufReader object
 fn parse_read(file: &mut BufReader<File>) -> Option<Read> {
     let mut sep = String::new();
     let mut read = Read::new();

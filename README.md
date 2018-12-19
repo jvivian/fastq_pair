@@ -23,5 +23,5 @@ Attempting to benchmark different fastq-pairing methods to identify trade-offs b
 - [ ] GZIP input / output
 - [ ] Assert paired end
 - [x] Singletons
-- [ ] Include Non-unique Header descriptors
+- [ ] Include non-unique header descriptors
 - [ ] Derived/custom output names
