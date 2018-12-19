@@ -31,21 +31,24 @@ struct Read {
 }
 
 
-fn store_reads(fastq_path: &str) -> Result<HashMap<String, PartialRead>> {
+fn store_read1(fastq_path: &str) -> Result<HashMap<String, PartialRead>> {
     let mut map = HashMap::new();
     let handle = File::open(fastq_path)?;
     let mut file = BufReader::new(handle);
     loop {
-        // read_line returns a Result<u32> of bytes of the line. Length zero at EOF, so break
+        // Variables for read/hashmap.  I could declare above and run `.clear()` here, but it's more code
         let mut header = String::new();
-        if file.read_line(&mut header)? == 0 { break; };
-        let mut read = PartialRead::new();
-        file.read_line(&mut read.seq)?;
-        // Unsure how to skip separator besides tossing it away in its own scope
         let mut sep = String::new();
+        let mut read = PartialRead::new();
+        // read_line returns a Result<u32> of bytes of the line. EOF is length zero, so we'll break
+        if file.read_line(&mut header)? == 0 { break; };
+        file.read_line(&mut read.seq)?;
         file.read_line(&mut sep)?;
         file.read_line(&mut read.qscore)?;
-        map.insert(header, read);
+        // Parse header for unique component
+        let header_vec: Vec<&str> = header.split_whitespace().collect();
+        let uniq = header_vec[0].to_string()[0..header_vec[0].len() - 2].to_string(); // Admittedly gross, but I can't use trim_end_matches due to .1.1 repeats
+        map.insert(uniq, read.clone());
     }
     Ok(map)
 }
@@ -87,7 +90,7 @@ fn main() {
     //let r2_path = matches.value_of("r2").unwrap();
 
     // Pair fastqs
-    let reads = store_reads(&r1_path);
+    let reads = store_read1(&r1_path)?;
 
     println!("{:?}", reads);
 }
