@@ -1,5 +1,7 @@
 use std::collections::HashMap;
-use std::io::{BufRead, Cursor, Seek, SeekFrom, Write};
+use std::io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write};
+use std::fs::File;
+use std::path::Path;
 use std::error::Error;
 use super::parse_read;
 
@@ -81,10 +83,28 @@ fn pair_fastqs<R, W>(fastq1: &mut R,
     Ok(())
 }
 
+pub fn pair_files(path1: &str, path2: &str) -> Result<(), Box<Error>> {
+    let parent = Path::new(path2).parent().unwrap();
+    let r1_out_path = parent.join("R1_paired.fastq").to_str().unwrap().to_string(); // This is sort of ridiculous
+    let r2_out_path = parent.join("R2_paired.fastq").to_str().unwrap().to_string();
+    let singleton_1_path = parent.join("R1_singletons.fastq").to_str().unwrap().to_string();
+    let singleton_2_path = parent.join("R2_singletons.fastq").to_str().unwrap().to_string();
+    let mut input1 = BufReader::new(File::open(path1)?);
+    let mut input2 = BufReader::new(File::open(path2)?);
+    let mut r1_paired = BufWriter::new(File::create(r1_out_path)?);
+    let mut r2_paired = BufWriter::new(File::create(r2_out_path)?);
+    let mut r1_singletons = BufWriter::new(File::create(singleton_1_path)?);
+    let mut r2_singletons = BufWriter::new(File::create(singleton_2_path)?);
+    pair_fastqs(&mut input1, &mut input2,
+                &mut r1_paired, &mut r2_paired,
+                &mut r1_singletons, &mut r2_singletons)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use std::str::from_utf8;
+    use std::io::Cursor;
 
     #[test]
     fn test_index_fastq() {
