@@ -3,7 +3,8 @@ use std::io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write};
 use std::fs::File;
 use std::path::Path;
 use std::error::Error;
-use super::parse_read;
+
+use fastq_pair::parse_read;
 
 // FIXME: unify separate implementations.
 fn get_next_header(input: &mut impl BufRead) -> Option<String> {
