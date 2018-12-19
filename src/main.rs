@@ -3,12 +3,11 @@ use clap::{App, Arg, ArgMatches};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Result};
+use std::path::Path;
 
-//use std::process::Command;
 
-
-// Read Struct
-#[derive(Debug, Clone)]
+// PartialRead for HashMap
+#[derive(Debug)]
 struct PartialRead {
     seq: String,
     qscore: String,
@@ -23,41 +22,71 @@ impl PartialRead {
     }
 }
 
-// Hold a complete Read
+// Hold a complete Read which
 struct Read {
     header: String,
     seq: String,
     qscore: String,
 }
 
+impl Read {
+    fn new() -> Read {
+        Read {
+            header: String::new(),
+            seq: String::new(),
+            qscore: String::new(),
+        }
+    }
+}
 
-fn store_read1(fastq_path: &str) -> Result<HashMap<String, PartialRead>> {
+// Give ownership of HashMap so I can pop items as pairs are found and it's not used elsewhere
+fn write_pairs(r2_path: &str, map: HashMap<String, PartialRead>) -> Result<()> {
+    // Open R2 and iterate over reads
+
+    // Check if header is in hashmap
+
+    // If in hashmap, write to BufWriter
+
+    // Else: Write out singleton file
+
+    Ok(())
+}
+
+
+fn store_read1(r1_path: &str) -> Result<HashMap<String, PartialRead>> {
     let mut map = HashMap::new();
-    let handle = File::open(fastq_path)?;
+    let handle = File::open(r1_path)?;
     let mut file = BufReader::new(handle);
     loop {
-        // Variables for read/hashmap.  I could declare above and run `.clear()` here, but it's more code
-        let mut header = String::new();
-        let mut sep = String::new();
-        let mut read = PartialRead::new();
-        // read_line returns a Result<u32> of bytes of the line. EOF is length zero, so we'll break
-        if file.read_line(&mut header)? == 0 { break; };
-        file.read_line(&mut read.seq)?;
-        file.read_line(&mut sep)?;
-        file.read_line(&mut read.qscore)?;
-        // Parse header for unique component
-        let header_vec: Vec<&str> = header.split_whitespace().collect();
-        let uniq = header_vec[0].to_string()[0..header_vec[0].len() - 2].to_string(); // Admittedly gross, but I can't use trim_end_matches due to .1.1 repeats
-        map.insert(uniq, read.clone());
+        let read = match parse_read(&mut file) {
+            Some(i) => i,
+            None => break
+        };
+        // Parse header into unique String and store along with PartialRead in HashMap
+        let header_vec: Vec<&str> = read.header.split_whitespace().collect();
+        let uniq = header_vec[0].to_string()[0..header_vec[0].len() - 2].to_string();
+        map.insert(uniq, PartialRead { seq: read.seq, qscore: read.qscore });
     }
     Ok(map)
+}
+
+fn parse_read(file: &mut BufReader<File>) -> Option<Read> {
+    let mut sep = String::new();
+    let mut read = Read::new();
+    // read_line returns a Result<u32> of bytes of the line. EOF is length zero, so we'll break
+    if file.read_line(&mut read.header).ok()? == 0 { return None; };
+    file.read_line(&mut read.seq).ok()?;
+    file.read_line(&mut sep).ok()?;
+    file.read_line(&mut read.qscore).ok()?;
+    // Parse header for unique component
+    Some(read)
 }
 
 
 fn get_matches() -> ArgMatches<'static> {
     let matches = App::new("fastq_pair")
         .version("1.0")
-        .author("John Vivian <jtvivian@gmail.com>")
+        .author("John Vivian and Joel ArmStrong")
         .about("Pairs two provided fastq files")
         .arg(
             Arg::with_name("r1")
@@ -81,7 +110,7 @@ fn get_matches() -> ArgMatches<'static> {
     matches
 }
 
-fn main() {
+fn main() -> Result<()> {
     // Argument parsing
     let matches = get_matches();
 
@@ -92,5 +121,7 @@ fn main() {
     // Pair fastqs
     let reads = store_read1(&r1_path)?;
 
-    println!("{:?}", reads);
+    println!("{:?}", reads["@SRR3380692.1"]);
+
+    Ok(())
 }
