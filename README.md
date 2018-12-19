@@ -16,9 +16,12 @@ Attempting to benchmark different fastq-pairing methods to identify trade-offs b
 - [ ] Iter-Both
 - [ ] Seek-Read
 - [ ] Seek-Iter-Both
+- [ ] Tests
 
 ## Additional optional features
 - [ ] BAM input
-- [ ] GZIP input
-- [ ] Compress output
+- [ ] GZIP input / output
 - [ ] Assert paired end
+- [ ] Singletons
+- [ ] Include Non-unique Header descriptors
+- [ ] Derived/custom output names
