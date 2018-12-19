@@ -1,10 +1,12 @@
 use clap;
 use clap::{App, Arg, ArgMatches};
+use std::fmt;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Result, Write};
 use std::path::Path;
 
+pub mod seek;
 
 // PartialRead for HashMap
 #[derive(Debug)]
@@ -27,6 +29,15 @@ impl Read {
             seq: String::new(),
             qscore: String::new(),
         }
+    }
+}
+
+impl fmt::Display for Read {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
+        write!(f, "{}\n", self.header.trim())?;
+        write!(f, "{}\n", self.seq.trim())?;
+        write!(f, "+\n")?;
+        write!(f, "{}\n", self.qscore.trim())
     }
 }
 
@@ -109,7 +120,7 @@ fn parse_header(header: &str) -> Result<String> {
 
 
 /// Parses Read from BufReader object
-fn parse_read(file: &mut BufReader<File>) -> Option<Read> {
+fn parse_read(file: &mut impl BufRead) -> Option<Read> {
     let mut sep = String::new();
     let mut read = Read::new();
     // read_line returns a Result<u32> of bytes of the line. EOF is length zero, so we'll break
@@ -142,6 +153,12 @@ fn get_matches() -> ArgMatches<'static> {
                 .required(true)
                 .help("Path to Read1 FASTQ")
                 .takes_value(true))
+        .arg(
+            Arg::with_name("method")
+                .required(false)
+                .takes_value(true)
+                .possible_values(&["store", "seek"])
+                .default_value("store"))
         .get_matches();
 
     matches
@@ -151,13 +168,27 @@ fn main() -> Result<()> {
     // Argument parsing
     let matches = get_matches();
 
-    // Unwrap is safe here due to r1/r2 being required arguments
+    // Unwrap is safe here due to all arguments being either required
+    // or having defaults
     let r1_path = matches.value_of("r1").unwrap();
     let r2_path = matches.value_of("r2").unwrap();
+    let method = matches.value_of("method").unwrap();
 
     // Pair fastqs
-    let mut reads = store_read1(&r1_path)?;
-    write_pairs(&r2_path, &mut reads)?;
+    match method {
+        "store" => {
+            let mut reads = store_read1(&r1_path)?;
+            write_pairs(&r2_path, &mut reads)?;
+        }
+        "seek" => {
+            // FIXME: main returns an io::Error so this should as
+            // well, for consistency
+            seek::pair_files(&r1_path, &r2_path).expect("Failed to pair");
+        }
+        _ => {
+            unreachable!();
+        }
+    }
 
     Ok(())
 }
