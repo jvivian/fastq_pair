@@ -12,7 +12,7 @@ Attempting to benchmark different fastq-pairing methods to identify trade-offs b
 
 
 ## Implemented
-- [ ] Store-Read
+- [x] Store-Read
 - [ ] Iter-Both
 - [ ] Seek-Read
 - [ ] Seek-Iter-Both
@@ -22,6 +22,6 @@ Attempting to benchmark different fastq-pairing methods to identify trade-offs b
 - [ ] BAM input
 - [ ] GZIP input / output
 - [ ] Assert paired end
-- [ ] Singletons
+- [x] Singletons
 - [ ] Include Non-unique Header descriptors
 - [ ] Derived/custom output names
