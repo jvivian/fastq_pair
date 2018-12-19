@@ -1,10 +1,12 @@
 use clap;
 use clap::{App, Arg, ArgMatches};
+use std::fmt;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Result, Write};
 use std::path::Path;
 
+pub mod seek;
 
 // PartialRead for HashMap
 #[derive(Debug)]
@@ -27,6 +29,15 @@ impl Read {
             seq: String::new(),
             qscore: String::new(),
         }
+    }
+}
+
+impl fmt::Display for Read {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
+        write!(f, "{}\n", self.header.trim())?;
+        write!(f, "{}\n", self.seq.trim())?;
+        write!(f, "+\n")?;
+        write!(f, "{}\n", self.qscore.trim())
     }
 }
 
@@ -109,7 +120,7 @@ fn parse_header(header: &str) -> Result<String> {
 
 
 /// Parses Read from BufReader object
-fn parse_read(file: &mut BufReader<File>) -> Option<Read> {
+fn parse_read(file: &mut impl BufRead) -> Option<Read> {
     let mut sep = String::new();
     let mut read = Read::new();
     // read_line returns a Result<u32> of bytes of the line. EOF is length zero, so we'll break
