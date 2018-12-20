@@ -23,7 +23,7 @@ Attempting to benchmark different fastq-pairing methods to identify trade-offs b
 - [ ] Seek-Read
 - [ ] Seek-Iter-Both
 
-## Additional optional features
+## Additional features
 - [ ] BAM input
 - [ ] GZIP input / output
 - [ ] Assert paired end
