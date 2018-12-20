@@ -1,15 +1,18 @@
-use std::fs::File;
-use std::io::{Result, BufRead, BufReader};
 use std::fmt;
+use std::io::{BufRead, Result};
 
-// PartialRead for HashMap
+/// A PartialRead which excludes the header to avoid redundancy
+/// when storing reads in a HashMap
 #[derive(Debug)]
 pub struct PartialRead {
     pub seq: String,
     pub qscore: String,
 }
 
-// Complete Read with header
+
+// TODO: Make a comprehensive version that also stores descriptor (remainder of header)
+/// Structure to hold a single read from a FASTQ file
+#[derive(Debug)]
 pub struct Read {
     pub header: String,
     pub seq: String,
@@ -26,7 +29,6 @@ impl Read {
     }
 }
 
-
 impl fmt::Display for Read {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
         write!(f, "{}\n", self.header.trim())?;
@@ -37,8 +39,7 @@ impl fmt::Display for Read {
 }
 
 
-
-
+/// Parses a header and returns its unique component
 pub fn parse_header(header: &str) -> Result<String> {
     let header_vec: Vec<&str> = header.split_whitespace().collect();
     let uniq = header_vec[0][0..header_vec[0].len() - 2].to_string();
@@ -46,12 +47,12 @@ pub fn parse_header(header: &str) -> Result<String> {
 }
 
 
-/// Parses Read from BufReader object
+/// Parses Read struct from BufReader object
 pub fn parse_read(file: &mut impl BufRead) -> Option<Read> {
     let mut sep = String::new();
     let mut read = Read::new();
     // read_line returns a Result<u32> of bytes of the line. EOF is length zero, so we'll break
-    if file.read_line(&mut read.header).ok()? == 0 { return None; };
+    if file.read_line(&mut read.header).ok()? == 0 { return None; }
     file.read_line(&mut read.seq).ok()?;
     file.read_line(&mut sep).ok()?;
     file.read_line(&mut read.qscore).ok()?;
@@ -61,8 +62,28 @@ pub fn parse_read(file: &mut impl BufRead) -> Option<Read> {
 
 #[cfg(test)]
 mod tests {
+    use std::fs::File;
+    use std::io::BufReader;
+    use super::*;
+
     #[test]
-    fn it_works() {
-        assert_eq!(2 + 2, 4);
+    fn test_parse_header() {
+        let header = "@foo:bar:UUID.1 extra:stuff";
+        assert_eq!("@foo:bar:UUID".to_string(), parse_header(header).unwrap());
+    }
+
+    #[test]
+    fn test_parse_read() {
+        let handle = File::open("data/R1.fastq").unwrap();
+        let mut reader = BufReader::new(handle);
+        let header = "@SRR3380692.1.1 1 length=101\n";
+        let seq = "ATTGTNTTATTCTATAAAACATTTCAAACCTAGTTAGAGATTTGTAATCAAA\
+                    AAACATTTGCGCAGAAAGCAGCACTTAGGGCTGCCTGTTCTATACCCTA\n";
+        let qscore = "@@@DD#4AFHHHHJJJJIJJJJJJJJJJJJIIJHGJJIJJJIJJGHGII\
+                    JJJJIJJJJJJJJIJJHHHFFFFFEEEEEDDDDDDDDDDDCCDEEEFDCDDC\n";
+        let read = parse_read(&mut reader).unwrap();
+        assert_eq!(header.to_string(), read.header);
+        assert_eq!(seq.to_string(), read.seq);
+        assert_eq!(qscore.to_string(), read.qscore);
     }
 }
