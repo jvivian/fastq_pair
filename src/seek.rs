@@ -1,9 +1,9 @@
+use fastq_pair::parse_read;
 use std::collections::HashMap;
-use std::io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write};
-use std::fs::File;
-use std::path::Path;
 use std::error::Error;
-use super::parse_read;
+use std::fs::File;
+use std::io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write};
+use std::path::Path;
 
 // FIXME: unify separate implementations.
 fn get_next_header(input: &mut impl BufRead) -> Option<String> {
@@ -55,8 +55,8 @@ fn pair_fastqs<R, W>(fastq1: &mut R,
                      paired2: &mut W,
                      unpaired1: &mut W,
                      unpaired2: &mut W) -> Result<(), Box<Error>>
-                       where R: Seek + BufRead,
-                             W: Write,
+    where R: Seek + BufRead,
+          W: Write,
 {
     let mut index = index_fastq(fastq1);
     while let Some(read2) = parse_read(fastq2) {
@@ -102,13 +102,13 @@ pub fn pair_files(path1: &str, path2: &str) -> Result<(), Box<Error>> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::str::from_utf8;
     use std::io::Cursor;
+    use std::str::from_utf8;
+    use super::*;
 
     #[test]
     fn test_index_fastq() {
-        let fastq = include_str!("../testdata/ncbi_1_shuffled.fastq");
+        let fastq = include_str!("../data/ncbi_1_shuffled.fastq");
         let read_pos = index_fastq(&mut Cursor::new(fastq.as_bytes()));
         assert_eq!(read_pos, vec![
             ("SRR3380692.3".to_string(), 0),
@@ -121,8 +121,8 @@ mod tests {
 
     #[test]
     fn test_pair_fastqs() {
-        let input1 = include_str!("../testdata/ncbi_1_shuffled.fastq");
-        let input2 = include_str!("../testdata/ncbi_2_shuffled.fastq");
+        let input1 = include_str!("../data/ncbi_1_shuffled.fastq");
+        let input2 = include_str!("../data/ncbi_2_shuffled.fastq");
         let mut paired1 = Cursor::new(vec![]);
         let mut paired2 = Cursor::new(vec![]);
         let mut unpaired1 = Cursor::new(vec![]);
@@ -131,12 +131,12 @@ mod tests {
                     &mut paired1, &mut paired2,
                     &mut unpaired1, &mut unpaired2).expect("Pairing failed");
         assert_eq!(from_utf8(&paired1.into_inner()).unwrap(),
-                   include_str!("../testdata/ncbi_1_paired.fastq"));
+                   include_str!("../data/ncbi_1_paired.fastq"));
         assert_eq!(from_utf8(&paired2.into_inner()).unwrap(),
-                   include_str!("../testdata/ncbi_2_paired.fastq"));
+                   include_str!("../data/ncbi_2_paired.fastq"));
         assert_eq!(from_utf8(&unpaired1.into_inner()).unwrap(),
-                   include_str!("../testdata/ncbi_1_unpaired.fastq"));
+                   include_str!("../data/ncbi_1_unpaired.fastq"));
         assert_eq!(from_utf8(&unpaired2.into_inner()).unwrap(),
-                   include_str!("../testdata/ncbi_2_unpaired.fastq"));
+                   include_str!("../data/ncbi_2_unpaired.fastq"));
     }
 }

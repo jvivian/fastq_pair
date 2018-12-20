@@ -14,9 +14,14 @@ Attempting to benchmark different fastq-pairing methods to identify trade-offs b
 ## Implemented
 - [x] Store-Read
 - [ ] Iter-Both
+- [x] Seek-Read
+- [ ] Seek-Iter-Both
+
+## Benchmarked
+- [ ] Store-Read
+- [ ] Iter-Both
 - [ ] Seek-Read
 - [ ] Seek-Iter-Both
-- [ ] Tests
 
 ## Additional optional features
 - [ ] BAM input
