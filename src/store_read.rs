@@ -22,11 +22,7 @@ pub fn write_pairs(r2_path: &str, map: &mut HashMap<String, PartialRead>) -> Res
     // Open R2 and iterate over reads
     let r2_handle = File::open(r2_path)?;
     let mut reader = BufReader::new(r2_handle);
-    loop {
-        let read = match parse_read(&mut reader) {
-            Some(i) => i,
-            None => break
-        };
+    while let Some(read) = parse_read(&mut reader) {
         // Check if header is in hashmap
         let header = parse_header(&read.header)?;
         if map.contains_key(&header) {
@@ -65,12 +61,7 @@ pub fn store_read1(r1_path: &str) -> Result<HashMap<String, PartialRead>> {
     let mut map = HashMap::new();
     let handle = File::open(r1_path)?;
     let mut file = BufReader::new(handle);
-    loop {
-        let read = match parse_read(&mut file) {
-            Some(i) => i,
-            None => break
-        };
-        // Parse header into unique String and store along with PartialRead in HashMap
+    while let Some(read) = parse_read(&mut file) {
         let header = parse_header(&read.header)?;
         map.insert(header, PartialRead { seq: read.seq, qscore: read.qscore });
     }
@@ -111,7 +102,8 @@ mod tests {
         for _ in 0..4 {
             let r1 = parse_read(&mut reader1).unwrap();
             let r2 = parse_read(&mut reader2).unwrap();
-            assert_eq!(parse_header(&r1.header).unwrap(), parse_header(&r2.header).unwrap());
+            assert_eq!(parse_header(&r1.header).unwrap(),
+                       parse_header(&r2.header).unwrap());
         }
         // Cleanup
         for output in &outputs {
