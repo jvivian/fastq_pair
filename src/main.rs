@@ -5,10 +5,10 @@ use std::io::Result;
 mod seek;
 mod store_read;
 
-fn get_matches() -> ArgMatches<'static> {
+fn cli() -> ArgMatches<'static> {
     let matches = App::new("fastq_pair")
         .version("1.0")
-        .author("John Vivian and Joel ArmStrong")
+        .author("John Vivian and Joel Armstrong")
         .about("Pairs two provided fastq files")
         .arg(
             Arg::with_name("r1")
@@ -39,10 +39,8 @@ fn get_matches() -> ArgMatches<'static> {
 
 fn main() -> Result<()> {
     // Argument parsing
-    let matches = get_matches();
-
-    // Unwrap is safe here due to all arguments being either required
-    // or having defaults
+    let matches = cli();
+    // Unwrap is safe here due to all arguments being either required or having defaults
     let r1_path = matches.value_of("r1").unwrap();
     let r2_path = matches.value_of("r2").unwrap();
     let method = matches.value_of("method").unwrap();
@@ -62,6 +60,5 @@ fn main() -> Result<()> {
             unreachable!();
         }
     }
-
     Ok(())
 }
