@@ -4,6 +4,7 @@ use std::io::Result;
 
 mod seek;
 mod store_read;
+mod iter_both;
 
 fn cli() -> ArgMatches<'static> {
     let matches = App::new("fastq_pair")
@@ -30,7 +31,7 @@ fn cli() -> ArgMatches<'static> {
             Arg::with_name("method")
                 .required(false)
                 .takes_value(true)
-                .possible_values(&["store", "seek"])
+                .possible_values(&["store", "seek", "iter"])
                 .default_value("store"))
         .get_matches();
 
@@ -55,6 +56,9 @@ fn main() -> Result<()> {
             // FIXME: main returns an io::Error so this should as
             // well, for consistency
             seek::pair_files(&r1_path, &r2_path).expect("Failed to pair");
+        }
+        "iter" => {
+            iter_both::pair_fastqs(&r1_path, &r2_path).expect("Failed to pair fastqs");
         }
         _ => {
             unreachable!();
