@@ -1,4 +1,4 @@
-use fastq_pair::{parse_header, parse_read, PartialRead};
+use fastq_pair::{delete_empty_fastq, parse_header, parse_read, PartialRead};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Result, Write};
@@ -40,17 +40,11 @@ pub fn write_pairs(r2_path: &str, map: &mut HashMap<String, PartialRead>) -> Res
     for key in map.keys() {
         let r1 = &map[key];
         write!(&mut singleton_writer, "{}.1\n{}+\n{}", &key, r1.seq, r1.qscore)?;
+        // TODO: Add map.remove() here?
     }
     // If singleton's file is empty, delete
     singleton_writer.flush()?;
-    let s_handle = File::open(&singleton_path)?;
-    let mut singleton_reader = BufReader::new(s_handle);
-    match parse_read(&mut singleton_reader) {
-        Some(_) => {}
-        None => {
-            std::fs::remove_file(singleton_path)?
-        }
-    };
+    delete_empty_fastq(&singleton_path)?;
     Ok(())
 }
 
