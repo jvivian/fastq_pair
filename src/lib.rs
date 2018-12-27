@@ -1,5 +1,7 @@
 use std::fmt;
+use std::fs::File;
 use std::io::{BufRead, Result};
+use std::io::BufReader;
 
 /// A PartialRead which excludes the header to avoid redundancy
 /// when storing reads in a HashMap
@@ -44,6 +46,18 @@ pub fn parse_header(header: &str) -> Result<String> {
     let header_vec: Vec<&str> = header.split_whitespace().collect();
     let uniq = header_vec[0][0..header_vec[0].len() - 2].to_string();
     Ok(uniq)
+}
+
+
+/// Deletes empty FASTQ by parsing read to see if it's reached EOF
+pub fn delete_empty_fastq(file_path: &str) -> Result<()> {
+    let handle = File::open(file_path)?;
+    let mut singleton_reader = BufReader::new(handle);
+    match parse_read(&mut singleton_reader) {
+        Some(_) => {}
+        None => std::fs::remove_file(file_path)?,
+    };
+    Ok(())
 }
 
 

@@ -1,4 +1,4 @@
-use fastq_pair::{parse_header, parse_read, PartialRead};
+use fastq_pair::{delete_empty_fastq, parse_header, parse_read, PartialRead};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter, Result};
@@ -56,16 +56,6 @@ fn write_read(header: &str,
     write!(w2, "{}.2\n{}+\n{}", header, r2.seq, r2.qscore)?;
     &map1.remove(header);
     &map2.remove(header);
-    Ok(())
-}
-
-fn delete_empty_fastq(file_path: &str) -> Result<()> {
-    let handle = File::open(file_path)?;
-    let mut singleton_reader = BufReader::new(handle);
-    match parse_read(&mut singleton_reader) {
-        Some(_) => {}
-        None => std::fs::remove_file(file_path)?,
-    };
     Ok(())
 }
 
