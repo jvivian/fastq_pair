@@ -40,6 +40,7 @@ pub fn write_pairs(r2_path: &str, map: &mut HashMap<String, PartialRead>) -> Res
     for key in map.keys() {
         let r1 = &map[key];
         write!(&mut singleton_writer, "{}.1\n{}+\n{}", &key, r1.seq, r1.qscore)?;
+        // TODO: Add map.remove() here?
     }
     // If singleton's file is empty, delete
     singleton_writer.flush()?;
