@@ -43,19 +43,16 @@ fn create_io(r1_path: &str, r2_path: &str) -> Result<IO> {
     })
 }
 
-
 /// Writes out paired reads two FASTQ files
 fn write_read(header: &str,
               w1: &mut BufWriter<File>,
               w2: &mut BufWriter<File>,
               map1: &mut HashMap<String, PartialRead>,
               map2: &mut HashMap<String, PartialRead>) -> Result<()> {
-    let r1 = &map1[header];
-    let r2 = &map2[header];
+    let r1 = &map1.remove(header).expect("Failed to remove header from r1 hashamp");
+    let r2 = &map2.remove(header).expect("Failed to remove header from r2 hashmap");
     write!(w1, "{}.1\n{}+\n{}", header, r1.seq, r1.qscore)?;
     write!(w2, "{}.2\n{}+\n{}", header, r2.seq, r2.qscore)?;
-    &map1.remove(header);
-    &map2.remove(header);
     Ok(())
 }
 
@@ -66,26 +63,23 @@ pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<()> {
     let mut io = create_io(r1_path, r2_path)?;
     let mut map1 = HashMap::new();
     let mut map2 = HashMap::new();
-
-    // TODO: Iterate until both reads are empty instead of just R1 -- maybe just use a loop with a break
-    while let Some(read1) = parse_read(&mut io.in_read1) {
-        let read2 = parse_read(&mut io.in_read2).expect("Failed to read R2");
-        let header1 = parse_header(&read1.header)?;
-        let header2 = parse_header(&read2.header)?;
-
-        // TODO: Maybe write out read and skip this if header1 == header2 to avoid overhead?
-        map1.insert(header1.clone(), PartialRead { seq: read1.seq, qscore: read1.qscore });
-        map2.insert(header2.clone(), PartialRead { seq: read2.seq, qscore: read2.qscore });
-
-        // Write reads if header is found in either HashMap
-        if map2.contains_key(&header1) {
-            write_read(&header1, &mut io.out_read1, &mut io.out_read2, &mut map1, &mut map2)?;
-        }
-        if map1.contains_key(&header2) {
-            write_read(&header2, &mut io.out_read1, &mut io.out_read2, &mut map1, &mut map2)?;
+    let (mut read1_finished, mut read2_finished) = (false, false);
+    while !(read1_finished && read2_finished) {
+        if let Some(read1) = parse_read(&mut io.in_read1) {
+            let header1 = parse_header(&read1.header)?;
+            map1.insert(header1.clone(), PartialRead { seq: read1.seq, qscore: read1.qscore });
+            if map2.contains_key(&header1) {
+                write_read(&header1, &mut io.out_read1, &mut io.out_read2, &mut map1, &mut map2)?;
+            }
+        } else { read1_finished = true }
+        if let Some(read2) = parse_read(&mut io.in_read2) {
+            let header2 = parse_header(&read2.header)?;
+            map2.insert(header2.clone(), PartialRead { seq: read2.seq, qscore: read2.qscore });
+            if map1.contains_key(&header2) {
+                write_read(&header2, &mut io.out_read1, &mut io.out_read2, &mut map1, &mut map2)?;
+            } else { read2_finished = true }
         }
     }
-
     // Write out singletons
     for key in map1.keys() {
         let r1 = &map1[key];
@@ -95,7 +89,6 @@ pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<()> {
         let r2 = &map2[key];
         write!(&mut io.out_single, "{}.2\n{}+\n{}", &key, r2.seq, r2.qscore)?;
     }
-
     // Delete Singleton file if empty
     io.out_single.flush()?;
     delete_empty_fastq(&io.singleton_path)?;
