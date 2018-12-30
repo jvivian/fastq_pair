@@ -1,7 +1,6 @@
 use clap;
 use clap::{App, Arg, ArgMatches};
-use failure::Fallible;
-type Result<T> = Fallible<T>;
+use fastq_pair::Result;
 
 mod seek;
 mod store_read;

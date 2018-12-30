@@ -1,7 +1,10 @@
 use std::fmt;
 use std::fs::File;
-use std::io::{BufRead, Result};
+use std::io::{BufRead, BufWriter};
 use std::io::BufReader;
+use failure::Fallible;
+use std::path::Path;
+pub type Result<T> = Fallible<T>;
 
 /// A PartialRead which excludes the header to avoid redundancy
 /// when storing reads in a HashMap
@@ -73,6 +76,43 @@ pub fn parse_read(file: &mut impl BufRead) -> Option<Read> {
     Some(read)
 }
 
+/// Contains all Read/Write objects
+pub struct IO {
+    pub in_read1: BufReader<File>,
+    pub in_read2: BufReader<File>,
+    pub out_read1: BufWriter<File>,
+    pub out_read2: BufWriter<File>,
+    pub out_single: BufWriter<File>,
+    pub singleton_path: String,
+}
+
+/// Create all IO objects for reading and writing
+pub fn create_io(r1_path: &str, r2_path: &str) -> Result<IO> {
+    let parent = Path::new(r1_path).parent().unwrap();
+    let r1_out_path = parent.join("R1_paired.fastq").to_str().unwrap().to_string();
+    let r2_out_path = parent.join("R2_paired.fastq").to_str().unwrap().to_string();
+    let singleton_path = parent.join("Singletons.fastq").to_str().unwrap().to_string();
+    // Readers
+    let r1_handle = File::open(&r1_path)?;
+    let r2_handle = File::open(&r2_path)?;
+    let r1_reader = BufReader::new(r1_handle);
+    let r2_reader = BufReader::new(r2_handle);
+    // Writers
+    let r1_out_handle = File::create(&r1_out_path)?;
+    let r2_out_handle = File::create(&r2_out_path)?;
+    let singleton_handle = File::create(&singleton_path)?;
+    let r1_writer = BufWriter::new(r1_out_handle);
+    let r2_writer = BufWriter::new(r2_out_handle);
+    let singleton_writer = BufWriter::new(singleton_handle);
+    Ok(IO {
+        in_read1: r1_reader,
+        in_read2: r2_reader,
+        out_read1: r1_writer,
+        out_read2: r2_writer,
+        out_single: singleton_writer,
+        singleton_path: singleton_path.to_string(),
+    })
+}
 
 #[cfg(test)]
 mod tests {

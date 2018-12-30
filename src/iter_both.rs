@@ -1,48 +1,9 @@
-use fastq_pair::{delete_empty_fastq, parse_header, parse_read, PartialRead};
+use fastq_pair::{delete_empty_fastq, parse_header, parse_read, PartialRead, create_io};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::BufWriter;
 use std::io::Write;
-use std::path::Path;
 use super::Result;
-
-/// Contains all Read/Write objects
-struct IO {
-    in_read1: BufReader<File>,
-    in_read2: BufReader<File>,
-    out_read1: BufWriter<File>,
-    out_read2: BufWriter<File>,
-    out_single: BufWriter<File>,
-    singleton_path: String,
-}
-
-/// Create all IO objects for reading and writing
-fn create_io(r1_path: &str, r2_path: &str) -> Result<IO> {
-    let parent = Path::new(r1_path).parent().unwrap();
-    let r1_out_path = parent.join("R1_paired.fastq").to_str().unwrap().to_string();
-    let r2_out_path = parent.join("R2_paired.fastq").to_str().unwrap().to_string();
-    let singleton_path = parent.join("Singletons.fastq").to_str().unwrap().to_string();
-    // Readers
-    let r1_handle = File::open(&r1_path)?;
-    let r2_handle = File::open(&r2_path)?;
-    let r1_reader = BufReader::new(r1_handle);
-    let r2_reader = BufReader::new(r2_handle);
-    // Writers
-    let r1_out_handle = File::create(&r1_out_path)?;
-    let r2_out_handle = File::create(&r2_out_path)?;
-    let singleton_handle = File::create(&singleton_path)?;
-    let r1_writer = BufWriter::new(r1_out_handle);
-    let r2_writer = BufWriter::new(r2_out_handle);
-    let singleton_writer = BufWriter::new(singleton_handle);
-    Ok(IO {
-        in_read1: r1_reader,
-        in_read2: r2_reader,
-        out_read1: r1_writer,
-        out_read2: r2_writer,
-        out_single: singleton_writer,
-        singleton_path: singleton_path.to_string(),
-    })
-}
 
 /// Writes out paired reads two FASTQ files
 fn write_read(header: &str,
@@ -99,6 +60,8 @@ pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+    use std::io::BufReader;
 
     #[test]
     fn test_pair_fastqs() {

@@ -1,8 +1,6 @@
-use fastq_pair::parse_read;
+use fastq_pair::{parse_read, create_io};
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write};
-use std::path::Path;
+use std::io::{BufRead, Seek, SeekFrom, Write};
 use super::Result;
 
 // FIXME: unify separate implementations.
@@ -53,8 +51,7 @@ fn pair_fastqs<R, W>(fastq1: &mut R,
                      fastq2: &mut R,
                      paired1: &mut W,
                      paired2: &mut W,
-                     unpaired1: &mut W,
-                     unpaired2: &mut W) -> Result<()>
+                     unpaired: &mut W) -> Result<()>
     where R: Seek + BufRead,
           W: Write,
 {
@@ -69,7 +66,7 @@ fn pair_fastqs<R, W>(fastq1: &mut R,
             write!(paired1, "{}", read1)?;
         } else {
             // No pair detected.
-            write!(unpaired2, "{}", read2)?;
+            write!(unpaired, "{}", read2)?;
         }
     }
 
@@ -78,26 +75,16 @@ fn pair_fastqs<R, W>(fastq1: &mut R,
     for pos1 in index.drain().map(|(_k, v)| v) {
         fastq1.seek(SeekFrom::Start(pos1))?;
         let read1 = parse_read(fastq1).expect("Couldn't read unpaired mate");
-        write!(unpaired1, "{}", read1)?;
+        write!(unpaired, "{}", read1)?;
     }
     Ok(())
 }
 
 pub fn pair_files(path1: &str, path2: &str) -> Result<()> {
-    let parent = Path::new(path2).parent().unwrap();
-    let r1_out_path = parent.join("R1_paired.fastq").to_str().unwrap().to_string(); // This is sort of ridiculous
-    let r2_out_path = parent.join("R2_paired.fastq").to_str().unwrap().to_string();
-    let singleton_1_path = parent.join("R1_singletons.fastq").to_str().unwrap().to_string();
-    let singleton_2_path = parent.join("R2_singletons.fastq").to_str().unwrap().to_string();
-    let mut input1 = BufReader::new(File::open(path1)?);
-    let mut input2 = BufReader::new(File::open(path2)?);
-    let mut r1_paired = BufWriter::new(File::create(r1_out_path)?);
-    let mut r2_paired = BufWriter::new(File::create(r2_out_path)?);
-    let mut r1_singletons = BufWriter::new(File::create(singleton_1_path)?);
-    let mut r2_singletons = BufWriter::new(File::create(singleton_2_path)?);
-    pair_fastqs(&mut input1, &mut input2,
-                &mut r1_paired, &mut r2_paired,
-                &mut r1_singletons, &mut r2_singletons)
+    let mut io = create_io(path1, path2)?;
+    pair_fastqs(&mut io.in_read1, &mut io.in_read2,
+                &mut io.out_read1, &mut io.out_read2,
+                &mut io.out_single)
 }
 
 #[cfg(test)]
@@ -125,18 +112,15 @@ mod tests {
         let input2 = include_str!("../data/ncbi_2_shuffled.fastq");
         let mut paired1 = Cursor::new(vec![]);
         let mut paired2 = Cursor::new(vec![]);
-        let mut unpaired1 = Cursor::new(vec![]);
-        let mut unpaired2 = Cursor::new(vec![]);
+        let mut unpaired = Cursor::new(vec![]);
         pair_fastqs(&mut Cursor::new(input1), &mut Cursor::new(input2),
                     &mut paired1, &mut paired2,
-                    &mut unpaired1, &mut unpaired2).expect("Pairing failed");
+                    &mut unpaired).expect("Pairing failed");
         assert_eq!(from_utf8(&paired1.into_inner()).unwrap(),
                    include_str!("../data/ncbi_1_paired.fastq"));
         assert_eq!(from_utf8(&paired2.into_inner()).unwrap(),
                    include_str!("../data/ncbi_2_paired.fastq"));
-        assert_eq!(from_utf8(&unpaired1.into_inner()).unwrap(),
-                   include_str!("../data/ncbi_1_unpaired.fastq"));
-        assert_eq!(from_utf8(&unpaired2.into_inner()).unwrap(),
-                   include_str!("../data/ncbi_2_unpaired.fastq"));
+        assert_eq!(from_utf8(&unpaired.into_inner()).unwrap(),
+                   include_str!("../data/ncbi_unpaired.fastq"));
     }
 }
