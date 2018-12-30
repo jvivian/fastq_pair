@@ -2,7 +2,7 @@ use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufWriter};
 use std::io::BufReader;
-use failure::Fallible;
+use failure::{Fallible, ResultExt};
 use std::path::Path;
 pub type Result<T> = Fallible<T>;
 
@@ -93,14 +93,14 @@ pub fn create_io(r1_path: &str, r2_path: &str) -> Result<IO> {
     let r2_out_path = parent.join("R2_paired.fastq").to_str().unwrap().to_string();
     let singleton_path = parent.join("Singletons.fastq").to_str().unwrap().to_string();
     // Readers
-    let r1_handle = File::open(&r1_path)?;
-    let r2_handle = File::open(&r2_path)?;
+    let r1_handle = File::open(&r1_path).context("Can't open read1 file")?;
+    let r2_handle = File::open(&r2_path).context("Can't open read2 file")?;
     let r1_reader = BufReader::new(r1_handle);
     let r2_reader = BufReader::new(r2_handle);
     // Writers
-    let r1_out_handle = File::create(&r1_out_path)?;
-    let r2_out_handle = File::create(&r2_out_path)?;
-    let singleton_handle = File::create(&singleton_path)?;
+    let r1_out_handle = File::create(&r1_out_path).context("Can't create read1 output file")?;
+    let r2_out_handle = File::create(&r2_out_path).context("Can't create read2 output file")?;
+    let singleton_handle = File::create(&singleton_path).context("Can't create singleton output file")?;
     let r1_writer = BufWriter::new(r1_out_handle);
     let r2_writer = BufWriter::new(r2_out_handle);
     let singleton_writer = BufWriter::new(singleton_handle);
