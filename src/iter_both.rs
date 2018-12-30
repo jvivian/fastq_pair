@@ -62,12 +62,22 @@ mod tests {
     use super::*;
     use std::path::Path;
     use std::io::BufReader;
+    use tempfile::tempdir;
+    use std::fs::copy;
 
     #[test]
     fn test_pair_fastqs() {
-        pair_fastqs("data/ncbi_1_shuffled.fastq", "data/ncbi_2_shuffled.fastq").unwrap();
+        let tmpdir = tempdir().unwrap();
+        let tmppath = tmpdir.path();
+        let input1 = tmppath.join("ncbi_1_shuffled.fastq");
+        let input2 = tmppath.join("ncbi_2_shuffled.fastq");
+        copy("data/ncbi_1_shuffled.fastq", &input1).unwrap();
+        copy("data/ncbi_2_shuffled.fastq", &input2).unwrap();
+        pair_fastqs(&input1.to_str().unwrap(), &input2.to_str().unwrap()).unwrap();
         // Output exists
-        let outputs = ["data/R1_paired.fastq", "data/R2_paired.fastq", "data/Singletons.fastq"];
+        let outputs = [tmppath.join("R1_paired.fastq"),
+                       tmppath.join("R2_paired.fastq"),
+                       tmppath.join("Singletons.fastq")];
         for output in &outputs {
             assert_eq!(Path::exists(Path::new(output)), true);
         }

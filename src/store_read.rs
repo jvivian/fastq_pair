@@ -67,6 +67,8 @@ pub fn store_read1(r1_path: &str) -> Result<HashMap<String, PartialRead>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use tempfile::tempdir;
+    use std::fs::copy;
 
     #[test]
     fn test_store_read1() {
@@ -83,9 +85,16 @@ mod tests {
     #[test]
     fn test_write_pairs() {
         let mut map = store_read1("data/ncbi_1_shuffled.fastq").unwrap();
-        write_pairs("data/ncbi_2_shuffled.fastq", &mut map).unwrap();
+
+        let tmpdir = tempdir().unwrap();
+        let tmppath = tmpdir.path();
+        let input2 = tmppath.join("ncbi_2_shuffled.fastq");
+        copy("data/ncbi_2_shuffled.fastq", &input2).unwrap();
+        write_pairs(input2.to_str().unwrap(), &mut map).unwrap();
         // Output exists
-        let outputs = ["data/R1_paired.fastq", "data/R2_paired.fastq", "data/Singletons.fastq"];
+        let outputs = [tmppath.join("R1_paired.fastq"),
+                       tmppath.join("R2_paired.fastq"),
+                       tmppath.join("Singletons.fastq")];
         for output in &outputs {
             assert_eq!(Path::exists(Path::new(output)), true);
         }
