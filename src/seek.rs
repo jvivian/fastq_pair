@@ -1,9 +1,9 @@
 use fastq_pair::parse_read;
 use std::collections::HashMap;
-use std::error::Error;
 use std::fs::File;
 use std::io::{BufRead, BufReader, BufWriter, Seek, SeekFrom, Write};
 use std::path::Path;
+use super::Result;
 
 // FIXME: unify separate implementations.
 fn get_next_header(input: &mut impl BufRead) -> Option<String> {
@@ -54,7 +54,7 @@ fn pair_fastqs<R, W>(fastq1: &mut R,
                      paired1: &mut W,
                      paired2: &mut W,
                      unpaired1: &mut W,
-                     unpaired2: &mut W) -> Result<(), Box<Error>>
+                     unpaired2: &mut W) -> Result<()>
     where R: Seek + BufRead,
           W: Write,
 {
@@ -83,7 +83,7 @@ fn pair_fastqs<R, W>(fastq1: &mut R,
     Ok(())
 }
 
-pub fn pair_files(path1: &str, path2: &str) -> Result<(), Box<Error>> {
+pub fn pair_files(path1: &str, path2: &str) -> Result<()> {
     let parent = Path::new(path2).parent().unwrap();
     let r1_out_path = parent.join("R1_paired.fastq").to_str().unwrap().to_string(); // This is sort of ridiculous
     let r2_out_path = parent.join("R2_paired.fastq").to_str().unwrap().to_string();

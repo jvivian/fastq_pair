@@ -1,8 +1,9 @@
 use fastq_pair::{delete_empty_fastq, parse_header, parse_read, PartialRead};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Result, Write};
+use std::io::{BufReader, BufWriter, Write};
 use std::path::Path;
+use super::Result;
 
 
 /// Pair FASTQ files and write out R1/R2 and singleton file
