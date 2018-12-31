@@ -1,47 +1,9 @@
-use fastq_pair::{delete_empty_fastq, parse_header, parse_read, PartialRead};
+use fastq_pair::{delete_empty_fastq, parse_header, parse_read, PartialRead, create_io};
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{BufReader, BufWriter, Result};
+use std::io::BufWriter;
 use std::io::Write;
-use std::path::Path;
-
-/// Contains all Read/Write objects
-struct IO {
-    in_read1: BufReader<File>,
-    in_read2: BufReader<File>,
-    out_read1: BufWriter<File>,
-    out_read2: BufWriter<File>,
-    out_single: BufWriter<File>,
-    singleton_path: String,
-}
-
-/// Create all IO objects for reading and writing
-fn create_io(r1_path: &str, r2_path: &str) -> Result<IO> {
-    let parent = Path::new(r1_path).parent().unwrap();
-    let r1_out_path = parent.join("R1_paired.fastq").to_str().unwrap().to_string();
-    let r2_out_path = parent.join("R2_paired.fastq").to_str().unwrap().to_string();
-    let singleton_path = parent.join("Singletons.fastq").to_str().unwrap().to_string();
-    // Readers
-    let r1_handle = File::open(&r1_path)?;
-    let r2_handle = File::open(&r2_path)?;
-    let r1_reader = BufReader::new(r1_handle);
-    let r2_reader = BufReader::new(r2_handle);
-    // Writers
-    let r1_out_handle = File::create(&r1_out_path)?;
-    let r2_out_handle = File::create(&r2_out_path)?;
-    let singleton_handle = File::create(&singleton_path)?;
-    let r1_writer = BufWriter::new(r1_out_handle);
-    let r2_writer = BufWriter::new(r2_out_handle);
-    let singleton_writer = BufWriter::new(singleton_handle);
-    Ok(IO {
-        in_read1: r1_reader,
-        in_read2: r2_reader,
-        out_read1: r1_writer,
-        out_read2: r2_writer,
-        out_single: singleton_writer,
-        singleton_path: singleton_path.to_string(),
-    })
-}
+use super::Result;
 
 /// Writes out paired reads two FASTQ files
 fn write_read(header: &str,
@@ -98,12 +60,24 @@ pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<()> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::path::Path;
+    use std::io::BufReader;
+    use tempfile::tempdir;
+    use std::fs::copy;
 
     #[test]
     fn test_pair_fastqs() {
-        pair_fastqs("data/ncbi_1_shuffled.fastq", "data/ncbi_2_shuffled.fastq").unwrap();
+        let tmpdir = tempdir().unwrap();
+        let tmppath = tmpdir.path();
+        let input1 = tmppath.join("ncbi_1_shuffled.fastq");
+        let input2 = tmppath.join("ncbi_2_shuffled.fastq");
+        copy("data/ncbi_1_shuffled.fastq", &input1).unwrap();
+        copy("data/ncbi_2_shuffled.fastq", &input2).unwrap();
+        pair_fastqs(&input1.to_str().unwrap(), &input2.to_str().unwrap()).unwrap();
         // Output exists
-        let outputs = ["data/R1_paired.fastq", "data/R2_paired.fastq", "data/Singletons.fastq"];
+        let outputs = [tmppath.join("R1_paired.fastq"),
+                       tmppath.join("R2_paired.fastq"),
+                       tmppath.join("Singletons.fastq")];
         for output in &outputs {
             assert_eq!(Path::exists(Path::new(output)), true);
         }

@@ -1,6 +1,6 @@
 use clap;
 use clap::{App, Arg, ArgMatches};
-use std::io::Result;
+use fastq_pair::Result;
 
 mod seek;
 mod store_read;
@@ -55,10 +55,10 @@ fn main() -> Result<()> {
         "seek" => {
             // FIXME: main returns an io::Error so this should as
             // well, for consistency
-            seek::pair_files(&r1_path, &r2_path).expect("Failed to pair");
+            seek::pair_files(&r1_path, &r2_path)?;
         }
         "iter" => {
-            iter_both::pair_fastqs(&r1_path, &r2_path).expect("Failed to pair fastqs");
+            iter_both::pair_fastqs(&r1_path, &r2_path)?;
         }
         _ => {
             unreachable!();
