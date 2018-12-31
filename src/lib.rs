@@ -128,13 +128,13 @@ mod tests {
 
     #[test]
     fn test_parse_read() {
-        let handle = File::open("data/R1.fastq").unwrap();
+        let handle = File::open("data/ncbi_1_paired.fastq").unwrap();
         let mut reader = BufReader::new(handle);
         let header = "@SRR3380692.1.1 1 length=101\n";
         let seq = "ATTGTNTTATTCTATAAAACATTTCAAACCTAGTTAGAGATTTGTAATCAAA\
                     AAACATTTGCGCAGAAAGCAGCACTTAGGGCTGCCTGTTCTATACCCTA\n";
-        let qscore = "@@@DD#4AFHHHHJJJJIJJJJJJJJJJJJIIJHGJJIJJJIJJGHGII\
-                    JJJJIJJJJJJJJIJJHHHFFFFFEEEEEDDDDDDDDDDDCCDEEEFDCDDC\n";
+        let qscore = "@@@DD#4AFHHHHJJJJIJJJJJJJJJJJJIIJHGJJIJJJIJJGHGIIJ\
+                    JJJIJJJJJJJJIJJHHHFFFFFEEEEEDDDDDDDDDDDCCDEEEFDCDDC\n";
         let read = parse_read(&mut reader).unwrap();
         assert_eq!(header.to_string(), read.header);
         assert_eq!(seq.to_string(), read.seq);

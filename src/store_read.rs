@@ -72,12 +72,12 @@ mod tests {
 
     #[test]
     fn test_store_read1() {
-        let map = store_read1("data/R1.fastq").unwrap();
+        let map = store_read1("data/ncbi_1_paired.fastq").unwrap();
         let read = &map["@SRR3380692.1"];
         let seq = "ATTGTNTTATTCTATAAAACATTTCAAACCTAGTTAGAGATTTGTAATCAAA\
                     AAACATTTGCGCAGAAAGCAGCACTTAGGGCTGCCTGTTCTATACCCTA\n";
-        let qscore = "@@@DD#4AFHHHHJJJJIJJJJJJJJJJJJIIJHGJJIJJJIJJGHGII\
-                    JJJJIJJJJJJJJIJJHHHFFFFFEEEEEDDDDDDDDDDDCCDEEEFDCDDC\n";
+        let qscore = "@@@DD#4AFHHHHJJJJIJJJJJJJJJJJJIIJHGJJIJJJIJJGHGIIJ\
+                    JJJIJJJJJJJJIJJHHHFFFFFEEEEEDDDDDDDDDDDCCDEEEFDCDDC\n";
         assert_eq!(seq.to_string(), read.seq);
         assert_eq!(qscore.to_string(), read.qscore);
     }
