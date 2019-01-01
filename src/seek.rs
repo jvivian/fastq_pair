@@ -51,7 +51,8 @@ pub fn pair_fastqs(path1: &str, path2: &str) -> Result<Output> {
     let mut io = create_io(path1, path2)?;
     let mut index = index_fastq(&mut io.in_read1);
     while let Some(read2) = parse_read(&mut io.in_read2) {
-        let trimmed = trim_header(&read2.header).unwrap();
+        let trimmed = trim_header(&read2.header)
+            .expect("Failed to trim header");
         if let Some(pos1) = index.remove(&trimmed) {
             // Pair found -- output them both.
             write!(&mut io.out_read2, "{}", read2)?;

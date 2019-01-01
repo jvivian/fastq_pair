@@ -7,17 +7,8 @@ use std::path::Path;
 
 pub type Result<T> = Fallible<T>;
 
-/// A PartialRead which excludes the header to avoid redundancy
-/// when storing reads in a HashMap
-#[derive(Debug)]
-pub struct PartialRead {
-    pub seq: String,
-    pub qscore: String,
-}
-
-
 // TODO: Make a comprehensive version that also stores descriptor (remainder of header)
-/// Structure to hold a single read from a FASTQ file
+/// Represents a single read from a FASTQ file
 #[derive(Debug)]
 pub struct Read {
     pub header: String,
@@ -44,6 +35,13 @@ impl fmt::Display for Read {
     }
 }
 
+/// Subset of `Read`; excludes header information
+#[derive(Debug)]
+pub struct PartialRead {
+    pub seq: String,
+    pub qscore: String,
+}
+
 /// Contains all Read/Write objects and paths
 pub struct IO {
     pub in_read1: BufReader<File>,
@@ -58,7 +56,7 @@ pub struct IO {
     pub singleton_path: String,
 }
 
-/// Contains just the output paths
+/// Subset of IO; contains only output paths
 pub struct Output {
     pub r1_out_path: String,
     pub r2_out_path: String,
@@ -79,7 +77,7 @@ pub fn delete_empty_fastq(file_path: &str) -> Option<String> {
     match parse_read(&mut singleton_reader) {
         Some(_) => return Some(file_path.to_string()),
         None => {
-            std::fs::remove_file(file_path).unwrap();
+            std::fs::remove_file(file_path).ok()?;
             return None;
         }
     }
@@ -99,10 +97,13 @@ pub fn parse_read(file: &mut impl BufRead) -> Option<Read> {
 
 /// Create all IO objects for reading and writing
 pub fn create_io(r1_path: &str, r2_path: &str) -> Result<IO> {
-    let parent = Path::new(r1_path).parent().unwrap();
-    let r1_out_path = parent.join("R1_paired.fastq").to_str().unwrap().to_string();
-    let r2_out_path = parent.join("R2_paired.fastq").to_str().unwrap().to_string();
-    let singleton_path = parent.join("Singletons.fastq").to_str().unwrap().to_string();
+    let parent = Path::new(r1_path).parent().expect("Failed to get parent path");
+    let r1_out_path = parent.join("R1_paired.fastq").to_str()
+        .expect("Failed to convert R1 path to str").to_string();
+    let r2_out_path = parent.join("R2_paired.fastq").to_str()
+        .expect("Failed to convert R2 path to str").to_string();
+    let singleton_path = parent.join("Singletons.fastq").to_str()
+        .expect("Failed to convert singleton path to str").to_string();
     // Readers
     let r1_handle = File::open(&r1_path).context("Can't open read1 file")?;
     let r2_handle = File::open(&r2_path).context("Can't open read2 file")?;

@@ -45,16 +45,16 @@ fn cli() -> ArgMatches<'static> {
 
 fn main() -> Result<()> {
     // Argument parsing
-    let matches = cli();
     // Unwrap is safe here due to all arguments being either required or having defaults
+    let matches = cli();
     let mut r1_path = matches.value_of("r1").unwrap().to_string();
     let mut r2_path = matches.value_of("r2").unwrap().to_string();
     let method = matches.value_of("method").unwrap();
     let gzip = matches.is_present("gzip");
 
     // Check input and uncompress if necessary
-    r1_path = io::check_input(&r1_path)?;
-    r2_path = io::check_input(&r2_path)?;
+    r1_path = io::convert_to_fastq(&r1_path)?;
+    r2_path = io::convert_to_fastq(&r2_path)?;
 
     // Pair fastqs
     let output;
@@ -73,7 +73,7 @@ fn main() -> Result<()> {
         }
     }
 
-    // Compress output if selected
+    // Compress output if specified
     if gzip == true {
         io::gzip(&output.r1_out_path)?;
         io::gzip(&output.r2_out_path)?;
@@ -81,6 +81,5 @@ fn main() -> Result<()> {
             io::gzip(singleton_path)?;
         }
     }
-
     Ok(())
 }

@@ -5,7 +5,7 @@ use std::io::BufWriter;
 use std::io::Write;
 use super::Result;
 
-/// Writes out paired reads two FASTQ files
+/// Writes out paired reads to two FASTQ files
 fn write_read(header: &str,
               w1: &mut BufWriter<File>,
               w2: &mut BufWriter<File>,
