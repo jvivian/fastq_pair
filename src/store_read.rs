@@ -54,13 +54,16 @@ pub fn index_read(in_read: &mut BufReader<File>) -> Result<HashMap<String, Parti
 
 #[cfg(test)]
 mod tests {
+    use std::fs::copy;
+    use std::path::Path;
     use super::*;
     use tempfile::tempdir;
-    use std::fs::copy;
 
     #[test]
     fn test_store_read1() {
-        let map = store_read1("data/ncbi_1_paired.fastq").unwrap();
+        let file = File::open("data/ncbi_1_paired.fastq").unwrap();
+        let mut handle = BufReader::new(file);
+        let map = index_read(&mut handle).unwrap();
         let read = &map["@SRR3380692.1"];
         let seq = "ATTGTNTTATTCTATAAAACATTTCAAACCTAGTTAGAGATTTGTAATCAAA\
                     AAACATTTGCGCAGAAAGCAGCACTTAGGGCTGCCTGTTCTATACCCTA\n";
@@ -72,17 +75,17 @@ mod tests {
 
     #[test]
     fn test_write_pairs() {
-        let mut map = store_read1("data/ncbi_1_shuffled.fastq").unwrap();
-
         let tmpdir = tempdir().unwrap();
         let tmppath = tmpdir.path();
+        let r1_path = tmppath.join("ncbi_1_shuffled.fastq");
+        copy("data/ncbi_1_shuffled.fastq", &r1_path).unwrap();
         let input2 = tmppath.join("ncbi_2_shuffled.fastq");
         copy("data/ncbi_2_shuffled.fastq", &input2).unwrap();
-        write_pairs(input2.to_str().unwrap(), &mut map).unwrap();
+        pair_fastqs(r1_path.to_str().unwrap(), input2.to_str().unwrap()).unwrap();
         // Output exists
         let outputs = [tmppath.join("R1_paired.fastq"),
-                       tmppath.join("R2_paired.fastq"),
-                       tmppath.join("Singletons.fastq")];
+            tmppath.join("R2_paired.fastq"),
+            tmppath.join("Singletons.fastq")];
         for output in &outputs {
             assert_eq!(Path::exists(Path::new(output)), true);
         }
@@ -96,10 +99,6 @@ mod tests {
             let r2 = parse_read(&mut reader2).unwrap();
             assert_eq!(parse_header(&r1.header).unwrap(),
                        parse_header(&r2.header).unwrap());
-        }
-        // Cleanup
-        for output in &outputs {
-            std::fs::remove_file(&output).unwrap();
         }
     }
 }

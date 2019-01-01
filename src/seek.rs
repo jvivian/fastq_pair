@@ -105,19 +105,22 @@ mod tests {
 
     #[test]
     fn test_pair_fastqs() {
-        let input1 = include_str!("../data/ncbi_1_shuffled.fastq");
-        let input2 = include_str!("../data/ncbi_2_shuffled.fastq");
-        let mut paired1 = Cursor::new(vec![]);
-        let mut paired2 = Cursor::new(vec![]);
-        let mut unpaired = Cursor::new(vec![]);
-        pair_fastqs(&mut Cursor::new(input1), &mut Cursor::new(input2),
-                    &mut paired1, &mut paired2,
-                    &mut unpaired).expect("Pairing failed");
-        assert_eq!(from_utf8(&paired1.into_inner()).unwrap(),
-                   include_str!("../data/ncbi_1_paired.fastq"));
-        assert_eq!(from_utf8(&paired2.into_inner()).unwrap(),
-                   include_str!("../data/ncbi_2_paired.fastq"));
-        assert_eq!(from_utf8(&unpaired.into_inner()).unwrap(),
-                   include_str!("../data/ncbi_unpaired.fastq"));
+        let tmpdir = tempdir().unwrap();
+        let tmppath = tmpdir.path();
+
+        let r1_path = tmppath.join("ncbi_1_shuffled.fastq");
+        let r2_path = tmppath.join("ncbi_2_shuffled.fastq");
+        copy("data/ncbi_1_shuffled.fastq", &r1_path).unwrap();
+        copy("data/ncbi_2_shuffled.fastq", &r2_path).unwrap();
+        let output = pair_fastqs(r1_path.to_str().unwrap(), r2_path.to_str().unwrap()).expect("Pairing failed");
+
+        let (mut paired1, mut paired2, mut unpaired) = (String::new(), String::new(), String::new());
+        File::open(&output.r1_out_path).unwrap().read_to_string(&mut paired1).unwrap();
+        File::open(&output.r2_out_path).unwrap().read_to_string(&mut paired2).unwrap();
+        let singleton_path = output.singleton_path.unwrap();
+        File::open(&singleton_path).unwrap().read_to_string(&mut unpaired).unwrap();
+        assert_eq!(&paired1, include_str!("../data/ncbi_1_paired.fastq"));
+        assert_eq!(&paired2, include_str!("../data/ncbi_2_paired.fastq"));
+        assert_eq!(&unpaired, include_str!("../data/ncbi_unpaired.fastq"));
     }
 }

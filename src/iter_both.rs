@@ -63,11 +63,11 @@ pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<Output> {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::path::Path;
-    use std::io::BufReader;
-    use tempfile::tempdir;
     use std::fs::copy;
+    use std::io::BufReader;
+    use std::path::Path;
+    use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn test_pair_fastqs() {
@@ -80,8 +80,8 @@ mod tests {
         pair_fastqs(&input1.to_str().unwrap(), &input2.to_str().unwrap()).unwrap();
         // Output exists
         let outputs = [tmppath.join("R1_paired.fastq"),
-                       tmppath.join("R2_paired.fastq"),
-                       tmppath.join("Singletons.fastq")];
+            tmppath.join("R2_paired.fastq"),
+            tmppath.join("Singletons.fastq")];
         for output in &outputs {
             assert_eq!(Path::exists(Path::new(output)), true);
         }
@@ -95,10 +95,6 @@ mod tests {
             let r2 = parse_read(&mut reader2).unwrap();
             assert_eq!(parse_header(&r1.header).unwrap(),
                        parse_header(&r2.header).unwrap());
-        }
-        // Cleanup
-        for output in &outputs {
-            std::fs::remove_file(&output).unwrap();
         }
     }
 }
