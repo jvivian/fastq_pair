@@ -1,4 +1,4 @@
-use fastq_pair::{parse_read, create_io};
+use fastq_pair::{create_io, delete_empty_fastq, Output, parse_read};
 use std::collections::HashMap;
 use std::io::{BufRead, Seek, SeekFrom, Write};
 use super::Result;
@@ -47,51 +47,48 @@ fn index_fastq<T>(input: &mut T) -> HashMap<String, u64> where T: Seek + BufRead
 /// Pair input FASTQ files in a low-memory fashion, writing mates to
 /// paired1 and paired2 in the same order. Unpaired reads are output
 /// to unpaired1 and unpaired2.
-fn pair_fastqs<R, W>(fastq1: &mut R,
-                     fastq2: &mut R,
-                     paired1: &mut W,
-                     paired2: &mut W,
-                     unpaired: &mut W) -> Result<()>
-    where R: Seek + BufRead,
-          W: Write,
-{
-    let mut index = index_fastq(fastq1);
-    while let Some(read2) = parse_read(fastq2) {
+pub fn pair_fastqs(path1: &str, path2: &str) -> Result<Output> {
+    let mut io = create_io(path1, path2)?;
+    let mut index = index_fastq(&mut io.in_read1);
+    while let Some(read2) = parse_read(&mut io.in_read2) {
         let trimmed = trim_header(&read2.header).unwrap();
         if let Some(pos1) = index.remove(&trimmed) {
             // Pair found -- output them both.
-            write!(paired2, "{}", read2)?;
-            fastq1.seek(SeekFrom::Start(pos1))?;
-            let read1 = parse_read(fastq1).expect("Couldn't read indexed mate");
-            write!(paired1, "{}", read1)?;
+            write!(&mut io.out_read2, "{}", read2)?;
+            &mut io.in_read1.seek(SeekFrom::Start(pos1))?;
+            let read1 = parse_read(&mut io.in_read1).expect("Couldn't read indexed mate");
+            write!(&mut io.out_read1, "{}", read1)?;
         } else {
             // No pair detected.
-            write!(unpaired, "{}", read2)?;
+            write!(&mut io.out_single, "{}", read2)?;
         }
     }
 
     // All the remaining elements of the index are unpaired. Output
     // them into the unpaired file for 1.
     for pos1 in index.drain().map(|(_k, v)| v) {
-        fastq1.seek(SeekFrom::Start(pos1))?;
-        let read1 = parse_read(fastq1).expect("Couldn't read unpaired mate");
-        write!(unpaired, "{}", read1)?;
+        &mut io.in_read1.seek(SeekFrom::Start(pos1))?;
+        let read1 = parse_read(&mut io.in_read1).expect("Couldn't read unpaired mate");
+        write!(&mut io.out_single, "{}", read1)?;
     }
-    Ok(())
-}
+    // Flush output for empty fastq check
+    &mut io.out_single.flush()?;
 
-pub fn pair_files(path1: &str, path2: &str) -> Result<()> {
-    let mut io = create_io(path1, path2)?;
-    pair_fastqs(&mut io.in_read1, &mut io.in_read2,
-                &mut io.out_read1, &mut io.out_read2,
-                &mut io.out_single)
+    Ok(Output {
+        r1_out_path: io.r1_out_path,
+        r2_out_path: io.r2_out_path,
+        singleton_path: delete_empty_fastq(&io.singleton_path),
+    })
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fs::copy;
+    use std::fs::File;
     use std::io::Cursor;
-    use std::str::from_utf8;
+    use std::io::Read;
     use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn test_index_fastq() {

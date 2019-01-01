@@ -1,4 +1,4 @@
-use fastq_pair::{delete_empty_fastq, parse_header, parse_read, PartialRead, create_io};
+use fastq_pair::{create_io, delete_empty_fastq, Output, parse_header, parse_read, PartialRead};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufWriter;
@@ -21,7 +21,7 @@ fn write_read(header: &str,
 /// Pair two FASTQ files by iterating over both files simultaneously.
 /// Should be much more memory efficient than "store_read" method if
 /// files are mostly paired
-pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<()> {
+pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<Output> {
     let mut io = create_io(r1_path, r2_path)?;
     let mut map1 = HashMap::new();
     let mut map2 = HashMap::new();
@@ -51,10 +51,14 @@ pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<()> {
         let r2 = &map2[key];
         write!(&mut io.out_single, "{}.2\n{}+\n{}", &key, r2.seq, r2.qscore)?;
     }
-    // Delete Singleton file if empty
+    // Flush output for empty fastq check
     io.out_single.flush()?;
-    delete_empty_fastq(&io.singleton_path)?;
-    Ok(())
+
+    Ok(Output {
+        r1_out_path: io.r1_out_path,
+        r2_out_path: io.r2_out_path,
+        singleton_path: delete_empty_fastq(&io.singleton_path),
+    })
 }
 
 #[cfg(test)]

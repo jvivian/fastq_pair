@@ -1,9 +1,10 @@
+use failure::{Fallible, ResultExt};
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufWriter};
 use std::io::BufReader;
-use failure::{Fallible, ResultExt};
 use std::path::Path;
+
 pub type Result<T> = Fallible<T>;
 
 /// A PartialRead which excludes the header to avoid redundancy
@@ -43,6 +44,26 @@ impl fmt::Display for Read {
     }
 }
 
+/// Contains all Read/Write objects and paths
+pub struct IO {
+    pub in_read1: BufReader<File>,
+    pub in_read2: BufReader<File>,
+    pub out_read1: BufWriter<File>,
+    pub out_read2: BufWriter<File>,
+    pub out_single: BufWriter<File>,
+    pub r1_in_path: String,
+    pub r2_in_path: String,
+    pub r1_out_path: String,
+    pub r2_out_path: String,
+    pub singleton_path: String,
+}
+
+/// Contains just the output paths
+pub struct Output {
+    pub r1_out_path: String,
+    pub r2_out_path: String,
+    pub singleton_path: Option<String>,
+}
 
 /// Parses a header and returns its unique component
 pub fn parse_header(header: &str) -> Result<String> {
@@ -51,18 +72,18 @@ pub fn parse_header(header: &str) -> Result<String> {
     Ok(uniq)
 }
 
-
 /// Deletes empty FASTQ by parsing read to see if it's reached EOF
-pub fn delete_empty_fastq(file_path: &str) -> Result<()> {
-    let handle = File::open(file_path)?;
+pub fn delete_empty_fastq(file_path: &str) -> Option<String> {
+    let handle = File::open(file_path).expect("Failed to open fastq");
     let mut singleton_reader = BufReader::new(handle);
     match parse_read(&mut singleton_reader) {
-        Some(_) => {}
-        None => std::fs::remove_file(file_path)?,
-    };
-    Ok(())
+        Some(_) => return Some(file_path.to_string()),
+        None => {
+            std::fs::remove_file(file_path).unwrap();
+            return None;
+        }
+    }
 }
-
 
 /// Parses Read struct from BufReader object
 pub fn parse_read(file: &mut impl BufRead) -> Option<Read> {
@@ -74,16 +95,6 @@ pub fn parse_read(file: &mut impl BufRead) -> Option<Read> {
     file.read_line(&mut sep).ok()?;
     file.read_line(&mut read.qscore).ok()?;
     Some(read)
-}
-
-/// Contains all Read/Write objects
-pub struct IO {
-    pub in_read1: BufReader<File>,
-    pub in_read2: BufReader<File>,
-    pub out_read1: BufWriter<File>,
-    pub out_read2: BufWriter<File>,
-    pub out_single: BufWriter<File>,
-    pub singleton_path: String,
 }
 
 /// Create all IO objects for reading and writing
@@ -110,7 +121,11 @@ pub fn create_io(r1_path: &str, r2_path: &str) -> Result<IO> {
         out_read1: r1_writer,
         out_read2: r2_writer,
         out_single: singleton_writer,
-        singleton_path: singleton_path.to_string(),
+        r1_in_path: r1_path.to_string(),
+        r2_in_path: r2_path.to_string(),
+        r1_out_path,
+        r2_out_path,
+        singleton_path,
     })
 }
 
