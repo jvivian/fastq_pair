@@ -1,11 +1,11 @@
-use fastq_pair::{delete_empty_fastq, parse_header, parse_read, PartialRead, create_io};
+use fastq_pair::{create_io, delete_empty_fastq, Output, parse_header, parse_read, PartialRead};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::BufWriter;
 use std::io::Write;
 use super::Result;
 
-/// Writes out paired reads two FASTQ files
+/// Writes out paired reads to two FASTQ files
 fn write_read(header: &str,
               w1: &mut BufWriter<File>,
               w2: &mut BufWriter<File>,
@@ -21,7 +21,7 @@ fn write_read(header: &str,
 /// Pair two FASTQ files by iterating over both files simultaneously.
 /// Should be much more memory efficient than "store_read" method if
 /// files are mostly paired
-pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<()> {
+pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<Output> {
     let mut io = create_io(r1_path, r2_path)?;
     let mut map1 = HashMap::new();
     let mut map2 = HashMap::new();
@@ -51,19 +51,23 @@ pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<()> {
         let r2 = &map2[key];
         write!(&mut io.out_single, "{}.2\n{}+\n{}", &key, r2.seq, r2.qscore)?;
     }
-    // Delete Singleton file if empty
+    // Flush output for empty fastq check
     io.out_single.flush()?;
-    delete_empty_fastq(&io.singleton_path)?;
-    Ok(())
+
+    Ok(Output {
+        r1_out_path: io.r1_out_path,
+        r2_out_path: io.r2_out_path,
+        singleton_path: delete_empty_fastq(&io.singleton_path),
+    })
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use std::path::Path;
-    use std::io::BufReader;
-    use tempfile::tempdir;
     use std::fs::copy;
+    use std::io::BufReader;
+    use std::path::Path;
+    use super::*;
+    use tempfile::tempdir;
 
     #[test]
     fn test_pair_fastqs() {
@@ -76,8 +80,8 @@ mod tests {
         pair_fastqs(&input1.to_str().unwrap(), &input2.to_str().unwrap()).unwrap();
         // Output exists
         let outputs = [tmppath.join("R1_paired.fastq"),
-                       tmppath.join("R2_paired.fastq"),
-                       tmppath.join("Singletons.fastq")];
+            tmppath.join("R2_paired.fastq"),
+            tmppath.join("Singletons.fastq")];
         for output in &outputs {
             assert_eq!(Path::exists(Path::new(output)), true);
         }
@@ -91,10 +95,6 @@ mod tests {
             let r2 = parse_read(&mut reader2).unwrap();
             assert_eq!(parse_header(&r1.header).unwrap(),
                        parse_header(&r2.header).unwrap());
-        }
-        // Cleanup
-        for output in &outputs {
-            std::fs::remove_file(&output).unwrap();
         }
     }
 }

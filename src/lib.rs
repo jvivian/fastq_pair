@@ -1,22 +1,14 @@
+use failure::{Fallible, ResultExt};
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufWriter};
 use std::io::BufReader;
-use failure::{Fallible, ResultExt};
 use std::path::Path;
+
 pub type Result<T> = Fallible<T>;
 
-/// A PartialRead which excludes the header to avoid redundancy
-/// when storing reads in a HashMap
-#[derive(Debug)]
-pub struct PartialRead {
-    pub seq: String,
-    pub qscore: String,
-}
-
-
 // TODO: Make a comprehensive version that also stores descriptor (remainder of header)
-/// Structure to hold a single read from a FASTQ file
+/// Represents a single read from a FASTQ file
 #[derive(Debug)]
 pub struct Read {
     pub header: String,
@@ -43,6 +35,33 @@ impl fmt::Display for Read {
     }
 }
 
+/// Subset of `Read`; excludes header information
+#[derive(Debug)]
+pub struct PartialRead {
+    pub seq: String,
+    pub qscore: String,
+}
+
+/// Contains all Read/Write objects and paths
+pub struct IO {
+    pub in_read1: BufReader<File>,
+    pub in_read2: BufReader<File>,
+    pub out_read1: BufWriter<File>,
+    pub out_read2: BufWriter<File>,
+    pub out_single: BufWriter<File>,
+    pub r1_in_path: String,
+    pub r2_in_path: String,
+    pub r1_out_path: String,
+    pub r2_out_path: String,
+    pub singleton_path: String,
+}
+
+/// Subset of IO; contains only output paths
+pub struct Output {
+    pub r1_out_path: String,
+    pub r2_out_path: String,
+    pub singleton_path: Option<String>,
+}
 
 /// Parses a header and returns its unique component
 pub fn parse_header(header: &str) -> Result<String> {
@@ -51,18 +70,18 @@ pub fn parse_header(header: &str) -> Result<String> {
     Ok(uniq)
 }
 
-
 /// Deletes empty FASTQ by parsing read to see if it's reached EOF
-pub fn delete_empty_fastq(file_path: &str) -> Result<()> {
-    let handle = File::open(file_path)?;
+pub fn delete_empty_fastq(file_path: &str) -> Option<String> {
+    let handle = File::open(file_path).expect("Failed to open fastq");
     let mut singleton_reader = BufReader::new(handle);
     match parse_read(&mut singleton_reader) {
-        Some(_) => {}
-        None => std::fs::remove_file(file_path)?,
-    };
-    Ok(())
+        Some(_) => return Some(file_path.to_string()),
+        None => {
+            std::fs::remove_file(file_path).ok()?;
+            return None;
+        }
+    }
 }
-
 
 /// Parses Read struct from BufReader object
 pub fn parse_read(file: &mut impl BufRead) -> Option<Read> {
@@ -76,22 +95,15 @@ pub fn parse_read(file: &mut impl BufRead) -> Option<Read> {
     Some(read)
 }
 
-/// Contains all Read/Write objects
-pub struct IO {
-    pub in_read1: BufReader<File>,
-    pub in_read2: BufReader<File>,
-    pub out_read1: BufWriter<File>,
-    pub out_read2: BufWriter<File>,
-    pub out_single: BufWriter<File>,
-    pub singleton_path: String,
-}
-
 /// Create all IO objects for reading and writing
 pub fn create_io(r1_path: &str, r2_path: &str) -> Result<IO> {
-    let parent = Path::new(r1_path).parent().unwrap();
-    let r1_out_path = parent.join("R1_paired.fastq").to_str().unwrap().to_string();
-    let r2_out_path = parent.join("R2_paired.fastq").to_str().unwrap().to_string();
-    let singleton_path = parent.join("Singletons.fastq").to_str().unwrap().to_string();
+    let parent = Path::new(r1_path).parent().expect("Failed to get parent path");
+    let r1_out_path = parent.join("R1_paired.fastq").to_str()
+        .expect("Failed to convert R1 path to str").to_string();
+    let r2_out_path = parent.join("R2_paired.fastq").to_str()
+        .expect("Failed to convert R2 path to str").to_string();
+    let singleton_path = parent.join("Singletons.fastq").to_str()
+        .expect("Failed to convert singleton path to str").to_string();
     // Readers
     let r1_handle = File::open(&r1_path).context("Can't open read1 file")?;
     let r2_handle = File::open(&r2_path).context("Can't open read2 file")?;
@@ -110,7 +122,11 @@ pub fn create_io(r1_path: &str, r2_path: &str) -> Result<IO> {
         out_read1: r1_writer,
         out_read2: r2_writer,
         out_single: singleton_writer,
-        singleton_path: singleton_path.to_string(),
+        r1_in_path: r1_path.to_string(),
+        r2_in_path: r2_path.to_string(),
+        r1_out_path,
+        r2_out_path,
+        singleton_path,
     })
 }
 
@@ -128,13 +144,13 @@ mod tests {
 
     #[test]
     fn test_parse_read() {
-        let handle = File::open("data/R1.fastq").unwrap();
+        let handle = File::open("data/ncbi_1_paired.fastq").unwrap();
         let mut reader = BufReader::new(handle);
         let header = "@SRR3380692.1.1 1 length=101\n";
         let seq = "ATTGTNTTATTCTATAAAACATTTCAAACCTAGTTAGAGATTTGTAATCAAA\
                     AAACATTTGCGCAGAAAGCAGCACTTAGGGCTGCCTGTTCTATACCCTA\n";
-        let qscore = "@@@DD#4AFHHHHJJJJIJJJJJJJJJJJJIIJHGJJIJJJIJJGHGII\
-                    JJJJIJJJJJJJJIJJHHHFFFFFEEEEEDDDDDDDDDDDCCDEEEFDCDDC\n";
+        let qscore = "@@@DD#4AFHHHHJJJJIJJJJJJJJJJJJIIJHGJJIJJJIJJGHGIIJ\
+                    JJJIJJJJJJJJIJJHHHFFFFFEEEEEDDDDDDDDDDDCCDEEEFDCDDC\n";
         let read = parse_read(&mut reader).unwrap();
         assert_eq!(header.to_string(), read.header);
         assert_eq!(seq.to_string(), read.seq);
