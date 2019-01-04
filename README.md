@@ -25,7 +25,7 @@ Attempting to benchmark different fastq-pairing methods to identify trade-offs b
 
 ## Additional features
 - [ ] BAM input
-- [ ] GZIP input / output
+- [x] GZIP input / output
 - [ ] Assert paired end
 - [x] Singletons
 - [ ] Include non-unique header descriptors
