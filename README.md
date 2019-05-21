@@ -18,10 +18,15 @@ Attempting to benchmark different fastq-pairing methods to identify trade-offs b
 - [ ] Seek-Iter-Both
 
 ## Benchmarked
-- [ ] Store-Read
-- [ ] Iter-Both
-- [ ] Seek-Read
-- [ ] Seek-Iter-Both
+Here are benchmarks on a pair of ~6GB fastq files where one had 10% of reads shuffled relative to the second file
+
+| Method     | Time (m) | Memory (G) |
+|------------|----------|------------|
+| EdwardsLab | 9.9      | 16         |
+| Store      | 2.1      | 7.5        |
+| Seek       | 4.25     | 1.9        |
+| Iter       | 1.45     | 0.0        |
+
 
 ## Additional features
 - [ ] BAM input
