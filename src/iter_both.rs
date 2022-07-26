@@ -39,8 +39,8 @@ pub fn pair_fastqs(r1_path: &str, r2_path: &str) -> Result<Output> {
             map2.insert(header2.clone(), PartialRead { seq: read2.seq, qscore: read2.qscore });
             if map1.contains_key(&header2) {
                 write_read(&header2, &mut io.out_read1, &mut io.out_read2, &mut map1, &mut map2)?;
-            } else { read2_finished = true }
-        }
+            } 
+        } else { read2_finished = true }
     }
     // Write out singletons
     for key in map1.keys() {
